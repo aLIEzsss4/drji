@@ -1,80 +1,82 @@
-import { BigInt } from "@graphprotocol/graph-ts"
+import { BigInt, store, } from "@graphprotocol/graph-ts"
 import {
-  drji,
-  Approval,
-  ApprovalForAll,
-  RoleAdminChanged,
-  RoleGranted,
-  RoleRevoked,
-  Transfer
+  Transfer as TransferEvent
 } from "../generated/drji/drji"
-import { ExampleEntity } from "../generated/schema"
+import { User, Token, Transfer } from "../generated/schema"
 
-export function handleApproval(event: Approval): void {
-  // Entities can be loaded from the store using a string ID; this ID
-  // needs to be unique across all entities of the same type
-  let entity = ExampleEntity.load(event.transaction.from.toHex())
+export const BIGINT_ZERO = BigInt.fromI32(0);
+export const BIGINT_ONE = BigInt.fromI32(1);
+export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 
-  // Entities only exist after they have been saved to the store;
-  // `null` checks allow to create entities on demand
-  if (!entity) {
-    entity = new ExampleEntity(event.transaction.from.toHex())
 
-    // Entity fields can be set using simple assignments
-    entity.count = BigInt.fromI32(0)
+export function handleTransfer(event: TransferEvent): void {
+  let token = Token.load(event.params.tokenId.toString());
+
+  if (!token) {
+    token = new Token(event.params.tokenId.toString());
+    token.tokenID = event.params.tokenId
+  }
+  token.owner = event.params.to.toHexString();
+
+  token.lastPrice = event.transaction.value
+  token.lastGas = event.transaction.gasPrice
+  token.save();
+
+  if (event.params.to.toHexString() != ZERO_ADDRESS ) {
+
+
+    // Buyer
+    let user1 = User.load(event.params.to.toHexString());
+    if (!user1) {
+      user1 = new User(event.params.to.toHexString());
+      user1.totalActions = BIGINT_ONE;
+      user1.totalGas = event.transaction.gasPrice
+      user1.totalIncome = BIGINT_ZERO;
+      user1.totalExpense = event.transaction.value
+      user1.hold = BIGINT_ONE;
+      user1.owner = event.params.to
+      user1.currentProfits = BIGINT_ZERO
+
+    } else {
+      user1.totalActions = user1.totalActions.plus(BIGINT_ONE);
+      user1.totalGas = user1.totalGas.plus(event.transaction.gasPrice);
+      // user1.totalIncome 
+      user1.totalExpense = user1.totalExpense.plus(event.transaction.value);
+      user1.hold = user1.hold.plus(BIGINT_ONE);
+      user1.currentProfits = user1.totalIncome.minus(user1.totalExpense)
+
+    }
+
+    user1.save();
+
+
+    // Seller
+    let user2 = User.load(event.params.from.toHexString());
+    if (!user2) {
+      user2 = new User(event.params.from.toHexString());
+      user2.totalActions = BIGINT_ONE;
+      user2.totalGas = BIGINT_ZERO;
+      user2.totalIncome = event.transaction.value;
+      user2.totalExpense = BIGINT_ZERO;
+      user2.hold = BIGINT_ZERO;
+      user2.owner = event.params.from
+      user2.currentProfits = event.transaction.value
+
+
+    } else {
+      user2.totalActions = user2.totalActions.plus(BIGINT_ONE);
+      // user2.totalGas = 
+      user2.totalIncome = user2.totalIncome.plus(event.transaction.value);
+      // user2.totalExpense 
+      user2.hold = user2.hold.minus(BIGINT_ONE);
+      user2.currentProfits = user2.totalIncome.minus(user2.totalExpense)
+
+    }
+
+
+
+    user2.save();
   }
 
-  // BigInt and BigDecimal math are supported
-  entity.count = entity.count + BigInt.fromI32(1)
 
-  // Entity fields can be set based on event parameters
-  entity.owner = event.params.owner
-  entity.approved = event.params.approved
-
-  // Entities can be written to the store with `.save()`
-  entity.save()
-
-  // Note: If a handler doesn't require existing field values, it is faster
-  // _not_ to load the entity from the store. Instead, create it fresh with
-  // `new Entity(...)`, set the fields that should be updated and save the
-  // entity back to the store. Fields that were not set or unset remain
-  // unchanged, allowing for partial updates to be applied.
-
-  // It is also possible to access smart contracts from mappings. For
-  // example, the contract that has emitted the event can be connected to
-  // with:
-  //
-  // let contract = Contract.bind(event.address)
-  //
-  // The following functions can then be called on this contract to access
-  // state variables and other data:
-  //
-  // - contract.DEFAULT_ADMIN_ROLE(...)
-  // - contract.MINT_ROLE(...)
-  // - contract.balanceOf(...)
-  // - contract.baseUri(...)
-  // - contract.getApproved(...)
-  // - contract.getRoleAdmin(...)
-  // - contract.hasRole(...)
-  // - contract.isApprovedForAll(...)
-  // - contract.mint(...)
-  // - contract.name(...)
-  // - contract.onERC721Received(...)
-  // - contract.ownerOf(...)
-  // - contract.supportsInterface(...)
-  // - contract.symbol(...)
-  // - contract.tokenByIndex(...)
-  // - contract.tokenOfOwnerByIndex(...)
-  // - contract.tokenURI(...)
-  // - contract.totalSupply(...)
 }
-
-export function handleApprovalForAll(event: ApprovalForAll): void {}
-
-export function handleRoleAdminChanged(event: RoleAdminChanged): void {}
-
-export function handleRoleGranted(event: RoleGranted): void {}
-
-export function handleRoleRevoked(event: RoleRevoked): void {}
-
-export function handleTransfer(event: Transfer): void {}

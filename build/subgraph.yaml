@@ -1,6 +1,6 @@
 specVersion: 0.0.4
 schema:
-  file: ./schema.graphql
+  file: schema.graphql
 dataSources:
   - kind: ethereum
     name: drji
@@ -8,7 +8,7 @@ dataSources:
     source:
       address: "0x438295b5082dc6a0cc50960e3513d5d7f23405c4"
       abi: drji
-      startBlock: 15261630 
+      startBlock: 15261630
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6
@@ -18,8 +18,8 @@ dataSources:
         - User
       abis:
         - name: drji
-          file: ./abis/drji.json
+          file: drji/abis/drji.json
       eventHandlers:
         - event: Transfer(indexed address,indexed address,indexed uint256)
           handler: handleTransfer
-      file: ./src/drji.ts
+      file: drji/drji.wasm
